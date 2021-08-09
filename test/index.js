@@ -1,5 +1,6 @@
 const mockDate = require('mockdate');
 const mockOs = require('mock-os');
+const mockFs = require('mock-fs');
 const test = require('tape');
 const ksuid = require('..');
 
@@ -143,6 +144,33 @@ test('parsing with prod env specified', t => {
 
 	t.end();
 });
+
+test('generating in docker container', t => {
+	const timestamp = baseTimestamp + 1;
+
+	mockFs({
+		'/proc/1': {
+			'cpuset': '/docker/7be92808767a667f35c8505cbf40d14e931ef6db5b0210329cf193b15ba9d605',
+		}
+	})
+
+	mockDate.set(new Date(timestamp * 1000));
+
+	const node = new ksuid.Node();
+	const id = node.generate('test');
+
+	t.equal(id.environment, 'prod');
+	t.equal(id.resource, 'test');
+	t.equal(id.timestamp, timestamp);
+	t.equal(id.instance.scheme, ksuid.Instance.schemes.DOCKER_CONT);
+	t.equal(id.instance.identifier.slice(0, 6).toString('hex'), '7be92808767a');
+	t.equal(id.sequenceId, 0);
+
+	mockFs.restore();
+	mockDate.reset();
+	t.end();
+});
+
 
 test('generating', t => {
 	const timestamp = baseTimestamp + 1;
