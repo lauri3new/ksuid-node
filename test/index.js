@@ -252,6 +252,33 @@ test('sequencing', t => {
 	t.end();
 });
 
+test('dont collide on clock skew adjustment', t => {
+	const timestampA = (baseTimestamp + 10) * 1000;
+	const timestampB = (baseTimestamp + 9) * 1000;
+
+	mockDate.set(new Date(timestampA));
+
+	const idOne = ksuid.generate('test').toString()
+	const seqOne = ksuid.parse(idOne);
+
+	mockDate.set(new Date(timestampB));
+
+	const idTwo = ksuid.generate('test').toString()
+	const seqTwo = ksuid.parse(idTwo);
+
+	mockDate.set(new Date(timestampA));
+
+	const idOneAgain = ksuid.generate('test').toString()
+	const seqOneAgain = ksuid.parse(idOneAgain);
+
+	t.equal(seqOne.sequenceId, 0);
+	t.equal(seqOneAgain.sequenceId, 2);
+	t.notEqual(idOne, idOneAgain)
+
+	mockDate.reset();
+	t.end();
+});
+
 test('generating with invalid resource', t => {
 	t.throws(
 		() => ksuid.generate(2),
